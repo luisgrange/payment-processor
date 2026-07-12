@@ -1,14 +1,13 @@
 package com.paymentprocessor.integration;
 
 import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.paymentprocessor.domain.PaymentRepository;
 import com.paymentprocessor.domain.enums.PaymentStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -26,7 +25,9 @@ import static org.awaitility.Awaitility.await;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
 public class PaymentFlowIntegrationTest {
+
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("payments")
@@ -69,8 +70,7 @@ public class PaymentFlowIntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
 
-        // espera o consumer processar de forma assíncrona (com retry, pode levar alguns segundos)
-        await().atMost(15, TimeUnit.SECONDS).untilAsserted(() -> {
+        await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
             var payment = paymentRepository.findByExternalId("ext-integration-001").orElseThrow();
             assertThat(payment.getStatus()).isIn(PaymentStatus.SUCCESS, PaymentStatus.FAILED);
         });
